@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Alphapiano Vision MVP</title>
+  <style>
+    video, canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      transform: scaleX(-1); /* Зеркально, как в реальном отражении */
+    }
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #info {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.8);
+      padding: 10px;
+      border-radius: 8px;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">Alphapiano Vision — отслеживание рук включено</div>
+  <video id="video" width="1280" height="720" autoplay muted></video>
+  <canvas id="canvas" width="1280" height="720"></canvas>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+  <script>
+    const videoElement = document.getElementById('video');
+    const canvasElement = document.getElementById('canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5
+    });
+
+    hands.onResults((results) => {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.multiHandLandmarks) {
+        for (const landmarks of results.multiHandLandmarks) {
+          drawConnectors(canvasCtx, landmarks, HAND_CONNECTIONS, {color: '#00FF00', lineWidth: 4});
+          drawLandmarks(canvasCtx, landmarks, {color: '#FF0000', lineWidth: 2});
+        }
+      }
+
+      canvasCtx.restore();
+    });
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({image: videoElement});
+      },
+      width: 1280,
+      height: 720
+    });
+
+    camera.start();
+  </script>
+</body>
+</html>
